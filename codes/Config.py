@@ -11,9 +11,11 @@ class ConfigX:
     """
     The class define the parameters of demand process.
     """
-    __slots__ = ("lam", "sigma", "mu")
+    __slots__ = ("lam", "sigma", "mu", "capacity")
 
     def __init__(self):
         self.lam = 16       # unit arrival rate
         self.sigma = 0     # standard deviation of demand batch size
         self.mu = 1       # mean of demand batch size
+
+        self.capacity = 500  # maximal capacity of installations

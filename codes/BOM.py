@@ -180,7 +180,7 @@ class BOMTree(BOMSerial):
         """
         Generate a equivalent serial system.
         """
-        print("Generate equivalent serial system: begin.......")
+        print("----------Generate equivalent serial system: begin.......-------------")
         serial = BOMSerial()
         serial.nodes = self.nodes
         serial.labeled_nodes = self.labeled_nodes
@@ -227,7 +227,7 @@ class BOMTree(BOMSerial):
                                   number=serial_current_node.number))
         serial.leaves[0].label = serial_current_node.label
 
-        print("Generate equivalent serial system: done!")
+        print("--------Generate equivalent serial system: done!-----------")
         return serial
 
 
@@ -237,7 +237,7 @@ def serial_merge(serial):
     :return: output
     """
     serial = deepcopy(serial)
-    serial.nodes = {}  # clear all nodes information
+    serial.nodes.clear()  # clear all nodes information
     if not isinstance(serial, BOMSerial):
         raise TreeTypeException()
 
@@ -249,7 +249,7 @@ def serial_merge(serial):
     while current_node:
         successor = current_node.successor
         if successor is None:
-            serial.nodes[successor.number] = successor
+            serial.nodes[str(current_node.number)] = current_node
             print("Reach the root node, end!")
             break
         #         print("current node: {}".format(current_node.number))
@@ -268,7 +268,10 @@ def serial_merge(serial):
             print("predecessors: {}".format(current_node.successor.predecessors[0].number))
             print("----------------------------------")
 
-        serial.nodes[current_node.number] = current_node
+        serial.nodes[str(current_node.number)] = current_node
         current_node = current_node.successor
-
     return serial
+
+
+def serial_agg(serial):
+    pass

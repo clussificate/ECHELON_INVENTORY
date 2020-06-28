@@ -7,7 +7,7 @@
 """
 from BOM import BOMSerial
 from utils import TreeTypeException, InfoMissException
-from math import sqrt, ceil, floor
+from math import sqrt, ceil, floor, isnan, isinf
 from scipy.stats import norm
 from Config import ConfigX
 
@@ -15,6 +15,7 @@ conf = ConfigX()
 mu = conf.mu
 lam = conf.lam
 sigma = conf.sigma
+capacity = conf.capacity
 
 
 def cal_base_stock(l, z):
@@ -67,21 +68,40 @@ def normal_bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0):
 
     zjls = [norm.ppf(x) for x in theta_jls]
     zjus = [norm.ppf(x) for x in theta_jus]
-    # print(zjls)
-    # print(zjus)
-    # print(Ljs)
+
+    print("theta_jls: {}".format(theta_jls))
+    print("theta_jus: {}".format(theta_jus))
+    print("zjls: {}".format(zjls))
+    print("zjus: {}".format(zjus))
+    print("Ljs:  {}".format(Ljs))
 
     lbs = [cal_base_stock(x, y) for x, y in zip(Ljs, zjls)]
     ubs = [cal_base_stock(x, y) for x, y in zip(Ljs, zjus)]
     # cost_lb = None
     # cost_ub = None
-
-    if mode == 0:
-        return [ceil(x) for x in lbs], [ceil(x) for x in ubs]
-    elif mode == 1:
-        return [floor(x) for x in lbs], [floor(x) for x in ubs]
-    else:
-        return lbs, ubs
+    try:
+        print("Normal approximation of Lower bounds: {}".format(lbs))
+        print("Normal approximation of Upper bounds: {}".format(ubs))
+        if mode == 0:
+            return [ceil(x) for x in lbs], [ceil(x) for x in ubs]
+        elif mode == 1:
+            return [floor(x) for x in lbs], [floor(x) for x in ubs]
+        else:
+            return lbs, ubs
+    except OverflowError:
+        print("|--------------------------------------------------------------------------------------------------|")
+        print("|----Some installations are Inf or NaN value, set the base stock bounds as the maximal capacity----|")
+        print("|--------------------------------------------------------------------------------------------------|")
+        lbs = [capacity if isnan(x) or isinf(x) else x for x in lbs]
+        ubs = [capacity if isnan(x) or isinf(x) else x for x in ubs]
+        print("Modified normal approximation of lower bounds: {}".format(lbs))
+        print("Modified normal approximation of uppers bounds: {}".format(ubs))
+        if mode == 0:
+            return [ceil(x) for x in lbs], [ceil(x) for x in ubs]
+        elif mode == 1:
+            return [floor(x) for x in lbs], [floor(x) for x in ubs]
+        else:
+            return lbs, ubs
 
 
 def cacl_echelon_holding_cost(node):
@@ -101,22 +121,27 @@ def calc_bounds(serial, mode=1):
     """
     if not isinstance(serial, BOMSerial):
         raise TreeTypeException()
-
     echelon_holding_cost_list = []
     lead_time_list = []
 
     # recalculate echelon holding cost
     if mode != 0:
+        print("----------------Recalculate echelon holding cost: begin----------------------")
         current_node = serial.leaves[0]
-        current_node.echelon_holding_cost = current_node.holdng_cost
+        current_node.echelon_holding_cost = current_node.holding_cost
 
         echelon_holding_cost_list.append(current_node.echelon_holding_cost)
         lead_time_list.append(current_node.lead_time)
 
         current_node = current_node.successor
+        # print("Successor of Leaf node: {}".format(current_node.number))
         while current_node:
             current_node.echelon_holding_cost = cacl_echelon_holding_cost(current_node)
+            echelon_holding_cost_list.append(current_node.echelon_holding_cost)
+            lead_time_list.append(current_node.lead_time)
             current_node = current_node.successor
+
+        print("----------------Recalculate echelon holding cost: done----------------------")
     else:
         current_node = serial.leaves[0]
         while current_node:
@@ -126,7 +151,13 @@ def calc_bounds(serial, mode=1):
             echelon_holding_cost_list.append(current_node.echelon_holding_cost)
             lead_time_list.append(current_node.lead_time)
 
-    normal_lbs, normal_ubs = normal_bounds(lead_time_list, echelon_holding_cost_list, serial.root.penalty_cost)
+    print("Echelon holding costs: {}".format(echelon_holding_cost_list))
+    print("Installation lead times: {}".format(lead_time_list))
+    print("Penalty cost: {}".format(serial.root.penalty_cost))
+    print("-----------------------------------------------------------------------------")
+    normal_lbs, normal_ubs = normal_bounds(lead_times=lead_time_list,
+                                           echelon_holding_costs=echelon_holding_cost_list,
+                                           penalty_cost=serial.root.penalty_cost)
     return normal_lbs, normal_ubs
 
 
@@ -135,11 +166,14 @@ if __name__ == "__main__":
     #         we need set a dummy node with sufficiently small holding cost,
     #         we also need set the lead time of root node to be zero.
     lead_time_list = [0.25, 0.25, 0.25, 0.25, 0]
+    """
+    @ example: four stages serial system with L=0.25, h=2.5, lambda=16, see Song(2003) table 6. 
+    """
     echelon_holding_cost_list = [0.0001, 2.5, 2.5, 2.5, 2.5]
     penalty_cost = 99
     lbs, ubs = normal_bounds(lead_time_list, echelon_holding_cost_list, penalty_cost)
-    print("lbs: {}".format(lbs))
-    print("ubs: {}".format(ubs))
+    print("Rounding lbs: {}".format(lbs))
+    print("Rounding ubs: {}".format(ubs))
 
 
 
