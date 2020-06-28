@@ -27,14 +27,40 @@ class BOMSerial:
         self.number_to_label = {}
         self.label_to_number = {}
 
+    def generate_labels(self):
+        """
+        :return: generate labels for serial systems.
+                 start with label 0, which means the most downstream installation
+        """
+        self.labeled_nodes.clear()
+        self.number_to_label.clear()
+        self.label_to_number.clear()
+        self.nodes.clear()
+
+        current_node = self.root
+        i = 0
+
+        while current_node:
+            current_node.label = str(i)
+            self.nodes[str(current_node.number)] = current_node
+            self.labeled_nodes[str(i)] = current_node
+            self.label_to_number[str(i)] = str(current_node.number)
+            self.number_to_label[str(current_node.number)] = str(i)
+            if current_node.predecessors:
+                current_node = current_node.predecessors[0]
+            else:
+                break
+            i += 1
+
     def __len__(self):
         """
-        retnrn # of all nodes
+        return # of all nodes
         """
         return len(self.nodes)
 
     def __getitem__(self, label):
         """
+        :param: label - str type
         get the node by its label (i.e. sequence after labeling procedure)
         """
         return self.labeled_nodes[label]
@@ -70,7 +96,7 @@ class BOMTree(BOMSerial):
 
             current_node = queue.pop()
             print("Process node number: {} ".format(current_node.number))
-            self.nodes[current_node.number] = current_node
+            self.nodes[str(current_node.number)] = current_node
             #             print(current_node.number)
             node_json = NodeJson[current_node.number]  # get root node json
 
@@ -81,7 +107,7 @@ class BOMTree(BOMSerial):
                     predecessor = Node(lead_time=predecessor_json["lead_time"],
                                        holding_cost=predecessor_json["holding_cost"],
                                        number=predecessor_json["number"])
-                    self.nodes[predecessor.number] = predecessor.number
+                    self.nodes[str(predecessor.number)] = predecessor.number
                     predecessors_cost += predecessor.holding_cost
 
                     current_node.predecessors.append(predecessor)
@@ -137,13 +163,17 @@ class BOMTree(BOMSerial):
         Generate node labels by a labeling procedure,
         which sorts all nodes from smllest to largest by their total lead times.
         """
+        self.label_to_number.clear()
+        self.number_to_label.clear()
+        self.labeled_nodes.clear()
+
         sorted_nodes = sorted(self.nodes.items(), key=lambda item: item[1].total_lead_time)
         i = 0
         for number, node in sorted_nodes:
-            node.label = i
-            self.labeled_nodes[i] = node
-            self.number_to_label[number] = i
-            self.label_to_number[i] = number
+            node.label = str(i)
+            self.labeled_nodes[str(i)] = node
+            self.number_to_label[str(number)] = str(i)
+            self.label_to_number[str(i)] = str(number)
             i += 1
 
     def transform_to_serial(self):

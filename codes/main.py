@@ -17,11 +17,12 @@ def assembly_to_serial(Json):
     serial_node = serial.leaves[0]
     while serial_node:
         print("current node number: {}, lead time:{}, label:{}".format(serial_node.number,
-                                                                     serial_node.lead_time,serial_node.label))
+                                                                       serial_node.lead_time, serial_node.label))
         if serial_node.successor:
             print("next node number:{}".format(serial_node.successor.number))
-        else: print("Reach root node.")
-        serial_node=serial_node.successor
+        else:
+            print("Reach root node.")
+        serial_node = serial_node.successor
 
     serial2 = serial_merge(serial)
 
@@ -32,8 +33,7 @@ def assembly_to_serial(Json):
     return serial2
 
 
-
-if __name__=="__main__":
+if __name__ == "__main__":
     # example:
     """
     number: orginal sequences
@@ -50,6 +50,3 @@ if __name__=="__main__":
     Json = {0: root, 1: node1, 2: node2, 3: node3, 4: node4, 5: node5, 6: node6, "leaves": [3, 4, 5, 6], "root": 0}
 
     serial = assembly_to_serial(Json)
-
-
-

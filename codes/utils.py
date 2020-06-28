@@ -131,6 +131,18 @@ def BOM_plot(BOM):
     plt.show()
 
 
+def policy_evaluation(base_stocks, holding_costs, lead_times, penalty_cost):
+    """
+    :param penalty_cost: backorder cost at the most downstream installation
+    :param base_stocks: list of installation base stock
+    :param holding_costs: list of installation holding cost
+    :param lead_times:list of installation lead time
+    :return: total cost
+    """
+
+    pass
+
+
 
 
 

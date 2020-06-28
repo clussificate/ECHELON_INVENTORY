@@ -71,11 +71,11 @@ def normal_bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0):
     # print(zjus)
     # print(Ljs)
 
-
     lbs = [cal_base_stock(x, y) for x, y in zip(Ljs, zjls)]
     ubs = [cal_base_stock(x, y) for x, y in zip(Ljs, zjus)]
     # cost_lb = None
     # cost_ub = None
+
     if mode == 0:
         return [ceil(x) for x in lbs], [ceil(x) for x in ubs]
     elif mode == 1:
