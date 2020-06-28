@@ -7,26 +7,37 @@
 """
 from BOM import BOMSerial
 from utils import TreeTypeException, InfoMissException
-import numpy as np
-from math import sqrt
+from math import sqrt, ceil, floor
 from scipy.stats import norm
+from Config import ConfigX
 
-"""
-    :param lam: unit arrival rate
-    :param sigma: standard deviation of demand batch size
-    :param mu: mean of demand batch size
-"""
-mu = 20
-sigma = 5
-lam = 1
+conf = ConfigX()
+mu = conf.mu
+lam = conf.lam
+sigma = conf.sigma
 
 
 def cal_base_stock(l, z):
+    global mu
+    global lam
+    global sigma
+
     return lam*mu*l + z*sqrt(lam*(mu**2 + sigma**2)*l)
 
 
-def normal_bounds(lead_times, echelon_holding_costs, penalty_cost):
+def poisson_bounds(lead_times, echelon_holding_costs, penalty_cost):
     """
+    TODO
+
+    Question: how to calculate the inverse of cdf of compound poisson distribution? Simulation?
+    """
+    pass
+
+
+def normal_bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0):
+    """
+
+    :param mode: 0 - rounding up; 1 - rounding down; 2 - no rounding
     :param penalty_cost: backorder cost
     :param lead_times: transportation time for node i to its successor.
                         Differ from the definition on lead time in Song et.al (2003)
@@ -56,12 +67,21 @@ def normal_bounds(lead_times, echelon_holding_costs, penalty_cost):
 
     zjls = [norm.ppf(x) for x in theta_jls]
     zjus = [norm.ppf(x) for x in theta_jus]
+    # print(zjls)
+    # print(zjus)
+    # print(Ljs)
 
-    lbs = [cal_base_stock(x, y) for x, y in zip(lead_times, zjls)]
-    ubs = [cal_base_stock(x, y) for x, y in zip(lead_times, zjus)]
+
+    lbs = [cal_base_stock(x, y) for x, y in zip(Ljs, zjls)]
+    ubs = [cal_base_stock(x, y) for x, y in zip(Ljs, zjus)]
     # cost_lb = None
     # cost_ub = None
-    return lbs, ubs
+    if mode == 0:
+        return [ceil(x) for x in lbs], [ceil(x) for x in ubs]
+    elif mode == 1:
+        return [floor(x) for x in lbs], [floor(x) for x in ubs]
+    else:
+        return lbs, ubs
 
 
 def cacl_echelon_holding_cost(node):
@@ -69,8 +89,8 @@ def cacl_echelon_holding_cost(node):
     calculate echelon holding cost
     """
     predecessors = node.predecessors
-    pred_hodling_cost = sum([x.holding_cost for x in predecessors])
-    return node.holding_cost - pred_hodling_cost
+    pred_holding_cost = sum([x.holding_cost for x in predecessors])
+    return node.holding_cost - pred_holding_cost
 
 
 def calc_bounds(serial, mode=1):
@@ -109,6 +129,17 @@ def calc_bounds(serial, mode=1):
     normal_lbs, normal_ubs = normal_bounds(lead_time_list, echelon_holding_cost_list, serial.root.penalty_cost)
     return normal_lbs, normal_ubs
 
+
+if __name__ == "__main__":
+    # notice: Due to the different definition on lead time in Song (2003),
+    #         we need set a dummy node with sufficiently small holding cost,
+    #         we also need set the lead time of root node to be zero.
+    lead_time_list = [0.25, 0.25, 0.25, 0.25, 0]
+    echelon_holding_cost_list = [0.0001, 2.5, 2.5, 2.5, 2.5]
+    penalty_cost = 99
+    lbs, ubs = normal_bounds(lead_time_list, echelon_holding_cost_list, penalty_cost)
+    print("lbs: {}".format(lbs))
+    print("ubs: {}".format(ubs))
 
 
 
