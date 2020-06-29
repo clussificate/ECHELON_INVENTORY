@@ -8,6 +8,7 @@
 from Node import *
 import collections
 from utils import Queue
+from copy import deepcopy
 
 
 class BOMSerial:
