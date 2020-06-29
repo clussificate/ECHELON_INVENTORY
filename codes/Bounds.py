@@ -117,7 +117,7 @@ def calc_bounds(serial, mode=1):
     """"
     :param mode: 0 - need not calculate echelon holding cost;
                  otherwise - recalculate echelon holding cost.
-    :return: lower and upper bounds
+    :return: lower and upper bounds of echelon base-stocks
     """
     if not isinstance(serial, BOMSerial):
         raise TreeTypeException()
