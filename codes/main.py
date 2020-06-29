@@ -15,8 +15,7 @@ def assembly_to_serial(Json, mode=0):
     Assembly.generate_tree(Json)
     serial = Assembly.transform_to_serial()
 
-    serial_node = serial.leaves[0]
-
+    # serial_node = serial.leaves[0]
     # while serial_node:
     #     print("current node number: {}, lead time:{}, label:{}".format(serial_node.number,
     #                                                                    serial_node.lead_time, serial_node.label))
