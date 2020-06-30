@@ -43,7 +43,7 @@ def assembly_to_serial(Json, mode=0):
 if __name__ == "__main__":
     # example:
     """
-    number: orginal sequences
+    number: original sequences
     label: sequences after labeling procedure.
     """
     root = {"lead_time": 0, "holding_cost": 0.7, "penalty_cost": 0.5, "successor": None, "predecessors": [1, 2],

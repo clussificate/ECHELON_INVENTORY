@@ -232,15 +232,6 @@ class BOMTree(BOMSerial):
         Generalized Assumption:  the sum of the echelon holding costs of item i and all its predecessors are positive
                                  (see. Kaj Rosling et al.1989)
         :return: serial system which eliminates all nodes with negative echelon holding cost
-        @ example:
-        root =   {"lead_time":0, "holding_cost":0.7, "penalty_cost": 0.5,"successor":None, "predecessors":[1,2],"number":0}
-        node1 =  {"lead_time":1, "holding_cost":0.2,"successor":0,"predecessors":[3,4],"number":1}
-        node2 =  {"lead_time":4, "holding_cost":0.4,"successor":0,"predecessors":[5,6],"number":2}
-        node3 =  {"lead_time":2, "holding_cost":0.1,"successor":1,"predecessors":None,"number":3}
-        node4 =  {"lead_time":3, "holding_cost":0.2,"successor":1,"predecessors":None,"number":4}
-        node5 =  {"lead_time":1, "holding_cost":0.1,"successor":2,"predecessors":None,"number":5}
-        node6 =  {"lead_time":2, "holding_cost":0.2,"successor":2,"predecessors":None,"number":6}
-        Json = {0:root,1:node1,2:node2,3:node3,4:node4,5:node5,6:node6,"leaves":[3,4,5,6],"root":0}
         """
 
         self.nodes.clear()  # clear nodes information
@@ -263,7 +254,7 @@ class BOMTree(BOMSerial):
                                                     merge_node.echelon_holding_cost
                 current_node.lead_time = current_node.lead_time + merge_node.lead_time
 
-                current_node.holding_cost = None  # to be check
+                current_node.holding_cost = current_node.holding_cost + merge_node.holding_cost
                 current_node.predecessors.extend(merge_node.predecessors)
                 current_node.predecessors.remove(merge_node)
 

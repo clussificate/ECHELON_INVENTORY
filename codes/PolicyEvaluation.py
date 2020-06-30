@@ -11,8 +11,8 @@ from Config import ConfigX
 def policy_evaluation(base_stocks, holding_costs, lead_times, penalty_cost):
     """
     :param penalty_cost: backorder cost at the most downstream installation
-    :param base_stocks: list of installation base stock
-    :param holding_costs: list of installation holding cost
+    :param base_stocks: list of echelon base stock
+    :param holding_costs: list of echelon holding cost
     :param lead_times:list of installation lead time
     :return: total cost
     """
@@ -59,9 +59,9 @@ if __name__ == "__main__":
                the leaf node is a dummy node with lead time=0 and echelon holding cost = 0.001
      """
 
-    lead_time_list = [0.25, 0.25, 0.25, 0.25, 0.]
-    echelon_holding_cost_list = [0.0001, 2.5, 2.5, 2.5, 0.25]
-    base_stock_list = [25, 18, 14, 8]  # omit the dummy leaf node
+    lead_time_list = [0.25, 0.25, 0.25, 0.25, 0.1]
+    echelon_holding_cost_list = [0.0001, 2.5, 2.5, 2.5, 0.25, 0]
+    base_stock_list = [25, 18, 14, 8, 0]
     penalty_cost = 99
     total_cost = policy_evaluation(base_stocks=base_stock_list, holding_costs=echelon_holding_cost_list,
                                    lead_times=lead_time_list, penalty_cost=99)

@@ -113,9 +113,9 @@ def cacl_echelon_holding_cost(node):
     return node.holding_cost - pred_holding_cost
 
 
-def calc_bounds(serial, mode=0):
+def calc_bounds(serial, recalc=False):
     """"
-    :param mode: 0 - need not calculate echelon holding cost;
+    :param recalc: False - need not calculate echelon holding cost;
                  otherwise - recalculate echelon holding cost.
     :return: lower and upper bounds of echelon base-stocks
     """
@@ -125,7 +125,7 @@ def calc_bounds(serial, mode=0):
     lead_time_list = []
 
     # recalculate echelon holding cost
-    if mode != 0:
+    if not recalc:
         print("----------------Recalculate echelon holding cost: begin----------------------")
         current_node = serial.leaves[0]
         current_node.echelon_holding_cost = current_node.holding_cost
@@ -175,19 +175,3 @@ if __name__ == "__main__":
     lbs, ubs = normal_bounds(lead_time_list, echelon_holding_cost_list, penalty_cost)
     print("Rounding lbs: {}".format(lbs))
     print("Rounding ubs: {}".format(ubs))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
