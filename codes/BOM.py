@@ -126,16 +126,12 @@ class BOMTree(BOMSerial):
         print("---------BFS for generating assembly network: done.------------")
 
         self.leaf_warpper()  # transform to leaf type for all leaves
-        self.calc_total_lead_time()  # calculate total lead time for each node
-        self.generate_labels()  # generate labels by a labeling procedure
 
     def leaf_warpper(self):
         for idx, leaf in enumerate(self.leaves):
-            self.leaves[idx] = Leaf(lead_time=leaf.lead_time,
+            self.leaves[idx] = Leaf(lead_time=leaf.lead_time, echelon_holding_cost=leaf.echelon_holding_cost,
                                     holding_cost=leaf.holding_cost, number=leaf.number,
                                     successor=leaf.successor)
-
-            self.leaves[idx].echelon_holding_cost = leaf.echelon_holding_cost
 
     def calc_total_lead_time(self):
         """
@@ -177,24 +173,26 @@ class BOMTree(BOMSerial):
             self.label_to_number[str(i)] = str(number)
             i += 1
 
-    def transform_to_serial(self):
+    def transform_to_serial_default(self):
         """
-        Generate a equivalent serial system.
+         Assumption:
+            all echelon holding costs are positive which realizes the Long-Run Balance (see. Kaj Rosling et al.1989)
+        :return:
         """
-        print("----------Generate equivalent serial system: begin.......-------------")
+        self.calc_total_lead_time()  # calculate total lead time for each node
+        self.generate_labels()  # generate labels by a labeling procedure
+
         serial = BOMSerial()
         serial.nodes = self.nodes
         serial.labeled_nodes = self.labeled_nodes
         serial.number_to_label = self.number_to_label
         serial.label_to_number = self.number_to_label
 
-        ordered_nodes = list(self.labeled_nodes.values())
+        ordered_nodes = list(self.labeled_nodes.values())  # ordered by total lead times
         root = ordered_nodes[0]
         current_node = root
-        serial.root = Root(lead_time=root.lead_time,
-                           holding_cost=root.holding_cost,
-                           penalty_cost=root.penalty_cost,
-                           number=root.number)
+        serial.root = Root(lead_time=root.lead_time, echelon_holding_cost=root.echelon_holding_cost,
+                           holding_cost=root.holding_cost, penalty_cost=root.penalty_cost, number=root.number)
         serial.root.label = root.label
         serial_current_node = serial.root
 
@@ -203,10 +201,9 @@ class BOMTree(BOMSerial):
             equivalent_lead_time = next_node.total_lead_time - current_node.total_lead_time
             #             print("equivalent_lead_time",equivalent_lead_time)
 
-            serial_next_node = Node(lead_time=equivalent_lead_time,
+            serial_next_node = Node(lead_time=equivalent_lead_time, successor=serial_current_node,
                                     holding_cost=next_node.holding_cost,
-                                    successor=serial_current_node,
-                                    number=next_node.number)
+                                    echelon_holding_cost=next_node.echelon_holding_cost, number=next_node.number)
             serial_next_node.label = next_node.label
 
             serial_current_node.predecessors.append(serial_next_node)
@@ -223,22 +220,87 @@ class BOMTree(BOMSerial):
         #         serial_current_node.successor.number))
         # last node serve as leaf node
         serial.leaves.append(Leaf(lead_time=serial_current_node.lead_time,
+                                  echelon_holding_cost=serial_current_node.echelon_holding_cost,
                                   holding_cost=serial_current_node.holding_cost,
                                   successor=serial_current_node.successor,
                                   number=serial_current_node.number))
         serial.leaves[0].label = serial_current_node.label
+        return serial
 
+    def transform_to_serial_elim(self):
+        """
+        Generalized Assumption:  the sum of the echelon holding costs of item i and all its predecessors are positive
+                                 (see. Kaj Rosling et al.1989)
+        :return: serial system which eliminates all nodes with negative echelon holding cost
+        @ example:
+        root =   {"lead_time":0, "holding_cost":0.7, "penalty_cost": 0.5,"successor":None, "predecessors":[1,2],"number":0}
+        node1 =  {"lead_time":1, "holding_cost":0.2,"successor":0,"predecessors":[3,4],"number":1}
+        node2 =  {"lead_time":4, "holding_cost":0.4,"successor":0,"predecessors":[5,6],"number":2}
+        node3 =  {"lead_time":2, "holding_cost":0.1,"successor":1,"predecessors":None,"number":3}
+        node4 =  {"lead_time":3, "holding_cost":0.2,"successor":1,"predecessors":None,"number":4}
+        node5 =  {"lead_time":1, "holding_cost":0.1,"successor":2,"predecessors":None,"number":5}
+        node6 =  {"lead_time":2, "holding_cost":0.2,"successor":2,"predecessors":None,"number":6}
+        Json = {0:root,1:node1,2:node2,3:node3,4:node4,5:node5,6:node6,"leaves":[3,4,5,6],"root":0}
+        """
+
+        self.nodes.clear()  # clear nodes information
+        self.leaves.clear()  # reset leaf node
+
+        stack = Stack()
+        stack.push(self.root)
+        while not stack.isEmpty():
+            current_node = stack.pop()
+
+            # aggregating until echelon holding cost of the current node greater than 0
+            # it means that we may aggregate several nodes.
+            while current_node.echelon_holding_cost <= 0 and current_node.predecessors:
+                predecessors = current_node.predecessors
+                ehcs = [x.echelon_holding_cost for x in predecessors]
+                ind = ehcs.index(min(ehcs))  # index of the predecessor with minimal echelon holding cost
+                merge_node = predecessors[ind]
+                current_node.number = str(current_node.number) + ',' + str(merge_node.number)
+                current_node.echelon_holding_cost = current_node.echelon_holding_cost + \
+                                                    merge_node.echelon_holding_cost
+                current_node.lead_time = current_node.lead_time + merge_node.lead_time
+
+                current_node.holding_cost = None  # to be check
+                current_node.predecessors.extend(merge_node.predecessors)
+                current_node.predecessors.remove(merge_node)
+
+            if current_node.predecessors is None:  # reach the leaf node
+                self.leaves.append(current_node)
+
+            for predecessor in current_node.predecessors:
+                predecessor.successor = current_node
+                stack.push(predecessor)
+
+            self.nodes[str(current_node.number)] = current_node    # update current node
+
+        self.leaf_warpper()
+        serial = self.transform_to_serial_default()
+        return serial
+
+    def transform_to_serial(self, mode=0):
+        """
+        Generate a equivalent serial system.
+        :param: mode: default 0, for positive echelon holding cost assumption.
+                          other, for generalized assumption (see. Kaj Rosling et al.1989)
+        """
+        print("----------Generate equivalent serial system: begin.......-------------")
+        if mode == 0:
+            serial = self.transform_to_serial_default()
+        else:
+            serial = self.transform_to_serial_elim()
         print("--------Generate equivalent serial system: done!-----------")
         return serial
 
 
 def serial_merge(serial):
     """
-    :param serial:
-    :return: output
+    :return: serial system which merges zero lead time nodes.
     """
     serial = deepcopy(serial)
-    serial.nodes.clear()  # clear all nodes information
+
     if not isinstance(serial, BOMSerial):
         raise TreeTypeException()
 
@@ -250,7 +312,6 @@ def serial_merge(serial):
     while current_node:
         successor = current_node.successor
         if successor is None:
-            serial.nodes[str(current_node.number)] = current_node
             print("Reach the root node, end!")
             break
         #         print("current node: {}".format(current_node.number))
@@ -259,20 +320,26 @@ def serial_merge(serial):
         if current_node.lead_time == 0:
             print("--------find a 0 lead time!--------")
             print("current node: {}".format(current_node.number))
-            current_node.holding_cost = current_node.holding_cost + successor.holding_cost
+            current_node.echelon_holding_cost = current_node.echelon_holding_cost + successor.echelon_holding_cost
+            current_node.holding_cost = None
             current_node.number = str(current_node.number) + "," + str(successor.number)
             current_node.lead_time = successor.lead_time
             current_node.successor = successor.successor
             successor.successor.predecessors = [current_node]
+
             print("current node change to: {}".format(current_node.number))
             print("successor: {}".format(current_node.successor.number))
             print("predecessors: {}".format(current_node.successor.predecessors[0].number))
             print("----------------------------------")
 
-        serial.nodes[str(current_node.number)] = current_node
         current_node = current_node.successor
+
+    # recalculate all local holding costs
+    cum = 0  # Cumulative local holding cost
+    current_node = serial.leaves[0]
+    while current_node:
+        cum = current_node.echelon_holding_cost + cum
+        current_node.holding_cost = cum
+        current_node = current_node.successor
+    serial.generate_labels()  # update label information for serial system (BOMSerial.generate_labels())
     return serial
-
-
-def serial_agg(serial):
-    pass

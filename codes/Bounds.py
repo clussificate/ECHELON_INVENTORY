@@ -113,7 +113,7 @@ def cacl_echelon_holding_cost(node):
     return node.holding_cost - pred_holding_cost
 
 
-def calc_bounds(serial, mode=1):
+def calc_bounds(serial, mode=0):
     """"
     :param mode: 0 - need not calculate echelon holding cost;
                  otherwise - recalculate echelon holding cost.
@@ -150,6 +150,7 @@ def calc_bounds(serial, mode=1):
 
             echelon_holding_cost_list.append(current_node.echelon_holding_cost)
             lead_time_list.append(current_node.lead_time)
+            current_node = current_node.successor
 
     print("Echelon holding costs: {}".format(echelon_holding_cost_list))
     print("Installation lead times: {}".format(lead_time_list))

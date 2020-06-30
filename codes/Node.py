@@ -12,7 +12,7 @@ class Node:
     __slots__ = ('lead_time', 'holding_cost', 'successor', 'predecessors',
                  'number', 'label', 'echelon_holding_cost', 'total_lead_time')
 
-    def __init__(self, lead_time, holding_cost, number=None, successor=None,
+    def __init__(self, lead_time=None, holding_cost=None, number=None, successor=None,
                  predecessors=None, echelon_holding_cost=None, total_lead_time=None, label=None):
         """
 
@@ -42,8 +42,9 @@ class Leaf(Node):
     and is supplied from a outside supplier.
     """
 
-    def __init__(self, lead_time, holding_cost, number=None, successor=None):
-        super().__init__(lead_time, holding_cost, number, successor, None)
+    def __init__(self, lead_time=None, holding_cost=None, number=None, successor=None, echelon_holding_cost=None):
+        super().__init__(lead_time=lead_time, holding_cost=holding_cost, number=number,
+                         successor=successor, predecessors=None, echelon_holding_cost=echelon_holding_cost)
         if self.predecessors:
             raise NodeTypeException()
 
@@ -54,12 +55,15 @@ class Root(Node):
     supplies to customers.
     """
 
-    __slots__ = ("penalty_cost")
+    __slots__ = "penalty_cost"
 
-    def __init__(self, lead_time, holding_cost, penalty_cost, number=None, predecessors=None):
-        if predecessors == None:
+    def __init__(self, lead_time=None, holding_cost=None, penalty_cost=None, number=None,
+                 predecessors=None, echelon_holding_cost=None):
+
+        if predecessors is None:
             predecessors = []
-        super().__init__(lead_time, holding_cost, number, None, predecessors)
+        super().__init__(lead_time=lead_time, holding_cost=holding_cost, number=number,
+                         successor=None, predecessors=predecessors, echelon_holding_cost=echelon_holding_cost)
         self.penalty_cost = penalty_cost
         if self.successor:
             raise NodeTypeException()
