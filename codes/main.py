@@ -21,7 +21,7 @@ def assembly_to_serial(Json, mode=0):
     Assembly.generate_tree(Json)
     BOM_plot(Assembly)
     serial = Assembly.transform_to_serial(mode=mode)
-
+    BOM_plot(serial)
     # serial_node = serial.leaves[0]
     # while serial_node:
     #     print("current node number: {}, lead time:{}, label:{}".format(serial_node.number,
@@ -34,7 +34,6 @@ def assembly_to_serial(Json, mode=0):
     print("-----------Merge zero lead time nodes: begin....------------")
     serial2 = serial_merge(serial)
     print("-----------Merge zero lead time nodes: done!-----------------")
-    BOM_plot(serial)
     BOM_plot(serial2)
 
     return serial2
@@ -43,10 +42,12 @@ def assembly_to_serial(Json, mode=0):
 if __name__ == "__main__":
     # example:
     """
+    lead_time: process time of current to its unique successor. 
+             (Just suitable for assembly system, note that this is not a classical definition.) 
     number: original sequences
     label: sequences after labeling procedure.
     """
-    root = {"lead_time": 0, "holding_cost": 0.7, "penalty_cost": 0.5, "successor": None, "predecessors": [1, 2],
+    root = {"lead_time": 0, "holding_cost": 0.7, "penalty_cost": 9, "successor": None, "predecessors": [1, 2],
             "number": 0}
     node1 = {"lead_time": 1, "holding_cost": 0.2, "successor": 0, "predecessors": [3, 4], "number": 1}
     node2 = {"lead_time": 4, "holding_cost": 0.4, "successor": 0, "predecessors": [5, 6], "number": 2}

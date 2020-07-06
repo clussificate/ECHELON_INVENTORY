@@ -51,12 +51,11 @@ def normal_bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0):
 
     # Cumulative lead time,
     # notice the difference on the definition of lead time in Song et.al (2003)
-    lead_times.insert(0, 0)  # insert 0 lead time for the first node
     Ljs = []
     theta_jls = []
     theta_jus = []
 
-    for j in range(len(lead_times)-1):  # remove the last node
+    for j in range(len(echelon_holding_costs)):
         Lj = sum(lead_times[j:])
         Ljs.append(Lj)
         theta_jl = (penalty_cost + sum(echelon_holding_costs[0: j])) / \
@@ -117,15 +116,17 @@ def calc_bounds(serial, recalc=False):
     """"
     :param recalc: False - need not calculate echelon holding cost;
                  otherwise - recalculate echelon holding cost.
-    :return: lower and upper bounds of echelon base-stocks
+    :return: lower and upper bounds of echelon base stock levels
     """
     if not isinstance(serial, BOMSerial):
         raise TreeTypeException()
+
+    # initial lists with the first dummy node
+    lead_time_list = [0]
     echelon_holding_cost_list = []
-    lead_time_list = []
 
     # recalculate echelon holding cost
-    if not recalc:
+    if recalc:
         print("----------------Recalculate echelon holding cost: begin----------------------")
         current_node = serial.leaves[0]
         current_node.echelon_holding_cost = current_node.holding_cost
@@ -152,6 +153,9 @@ def calc_bounds(serial, recalc=False):
             lead_time_list.append(current_node.lead_time)
             current_node = current_node.successor
 
+    # initial lists with the second dummy node
+    echelon_holding_cost_list.append(0.0001)
+
     print("Echelon holding costs: {}".format(echelon_holding_cost_list))
     print("Installation lead times: {}".format(lead_time_list))
     print("Penalty cost: {}".format(serial.root.penalty_cost))
@@ -164,14 +168,15 @@ def calc_bounds(serial, recalc=False):
 
 if __name__ == "__main__":
     # notice: Due to the different definition on lead time in Song (2003),
-    #         we need set a dummy node with sufficiently small holding cost,
+    #         we need set two dummy nodes with sufficiently small holding cost,
     #         we also need set the lead time of root node to be zero.
-    lead_time_list = [0.25, 0.25, 0.25, 0.25, 0]
+    lead_time_list = [0, 0.25, 0.25, 0.25, 0.25, 0]
     """
     @ example: four stages serial system with L=0.25, h=2.5, lambda=16, see Song(2003) table 6. 
     """
-    echelon_holding_cost_list = [0.0001, 2.5, 2.5, 2.5, 2.5]
+    echelon_holding_cost_list = [0.0001, 2.5, 2.5, 2.5, 2.5, 0.0001]
     penalty_cost = 99
     lbs, ubs = normal_bounds(lead_time_list, echelon_holding_cost_list, penalty_cost)
     print("Rounding lbs: {}".format(lbs))
     print("Rounding ubs: {}".format(ubs))
+

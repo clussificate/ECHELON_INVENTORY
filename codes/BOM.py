@@ -158,7 +158,7 @@ class BOMTree(BOMSerial):
     def generate_labels(self):
         """
         Generate node labels by a labeling procedure,
-        which sorts all nodes from smllest to largest by their total lead times.
+        which sorts all nodes from smallest to largest by their total lead times.
         """
         self.label_to_number.clear()
         self.number_to_label.clear()
@@ -254,7 +254,7 @@ class BOMTree(BOMSerial):
                                                     merge_node.echelon_holding_cost
                 current_node.lead_time = current_node.lead_time + merge_node.lead_time
 
-                current_node.holding_cost = current_node.holding_cost + merge_node.holding_cost
+                current_node.holding_cost = None
                 current_node.predecessors.extend(merge_node.predecessors)
                 current_node.predecessors.remove(merge_node)
 
@@ -319,13 +319,14 @@ def serial_merge(serial):
             successor.successor.predecessors = [current_node]
 
             print("current node change to: {}".format(current_node.number))
-            print("successor: {}".format(current_node.successor.number))
-            print("predecessors: {}".format(current_node.successor.predecessors[0].number))
+            # print("successor: {}".format(current_node.successor.number))
+            # print("predecessors: {}".format(current_node.successor.predecessors[0].number))
             print("----------------------------------")
 
         current_node = current_node.successor
 
     # recalculate all local holding costs
+    print("-----------------recalculate all local holding costs-----------------")
     cum = 0  # Cumulative local holding cost
     current_node = serial.leaves[0]
     while current_node:
