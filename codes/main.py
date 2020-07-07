@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
     Json = {0: root, 1: node1, 2: node2, 3: node3, 4: node4, 5: node5, 6: node6, "leaves": [3, 4, 5, 6], "root": 0}
 
-    serial = assembly_to_serial(Json=Json, mode=1)
+    serial = assembly_to_serial(Json=Json, mode=0)
     # print("serial nodes: {}".format(serial.nodes))
     # print("serial successor: {}".format(serial.leaves[0].successor.number))
     normal_lbs, normal_ubs = calc_bounds(serial)

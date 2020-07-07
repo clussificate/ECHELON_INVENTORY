@@ -44,9 +44,6 @@ def normal_bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0):
                         Differ from the definition on lead time in Song et.al (2003)
     :param echelon_holding_costs: same as the definition in Song et.al (2003)
     :return: lower bounds and upper bounds with normal distribution approximation
-    @ example:
-    serial: |6| --1--> |5| --1--> |4+2| --1--> |3| ---2--> |1|--1--> |0| ---0-->
-     lower bound of node 4 (i.e. number 4+2), lead time:1+1+2+1=5
     """
 
     # Cumulative lead time,
@@ -87,7 +84,7 @@ def normal_bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0):
             return [floor(x) for x in lbs], [floor(x) for x in ubs]
         else:
             return lbs, ubs
-    except OverflowError:
+    except (OverflowError, ValueError):
         print("|--------------------------------------------------------------------------------------------------|")
         print("|----Some installations are Inf or NaN value, set the base stock bounds as the maximal capacity----|")
         print("|--------------------------------------------------------------------------------------------------|")
