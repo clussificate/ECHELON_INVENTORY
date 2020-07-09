@@ -14,6 +14,7 @@ import pickle
 import datetime
 from Config import ConfigX
 
+
 class NodeTypeException(Exception):
     def __init__(self):
         err = 'Incorrect Node Types. Leaf nodes have no predecessors, and root nodes have no successors'
