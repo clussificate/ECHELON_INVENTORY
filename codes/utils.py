@@ -180,3 +180,50 @@ def CDFsimulation(lamda, parameters, distrib="normal", n_sample=20000):
     quantile[1.0000] = np.quantile(demands, 1)
 
     return quantile
+
+
+def inverse_compound(quantile, lamda, parameters,
+                     distrib="normal", n_sample=20000, show=False):
+    """
+     parameters and distrib:
+    - beta: a, b
+    - gamma: alpha, lamda
+    - normal: loc, scale
+    - uniform: low, high
+    - exponential: scale
+    """
+    arrivals = np.random.poisson(lamda, n_sample)
+
+    print("Distribution: {}".format(distrib))
+    if distrib == "normal":
+        machine = np.random.normal
+    if distrib == "uniform":
+        machine = np.random.uniform
+    if distrib == "beta":
+        machine = np.random.beta
+    if distrib == "gamma":
+        machine = np.random.gamma
+    if distrib == "exp":
+        machine = np.random.exponential
+        parameters = [parameters[0]]
+
+    demands = []
+    for arrival in arrivals:
+        count = 0
+        if arrival == 0:
+            demands.append(count)
+        else:
+            samples = machine(*parameters, arrival)
+            demands.append(np.sum(samples))
+    print(demands)
+    sns.distplot(demands)
+
+    if quantile < 0:
+        quantile = 0
+    if quantile > 1:
+        quantile = 1
+    plt.scatter([np.quantile(demands, quantile)], [0], s=[100], c='r', marker='o')
+    if show:
+        plt.show()
+
+    return np.int(np.quantile(demands, quantile))

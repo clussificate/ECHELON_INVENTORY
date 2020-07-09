@@ -64,7 +64,7 @@ if __name__ == "__main__":
 
     # print("serial nodes: {}".format(serial.nodes))
     # print("serial successor: {}".format(serial.leaves[0].successor.number))
-    normal_lbs, normal_ubs = calc_bounds(serial, method="approximation")
+    normal_lbs, normal_ubs = calc_bounds(serial, method="simulation")
     print("Rounding lower bounds: {}".format(normal_lbs))
     print("Rounding upper bounds: {}".format(normal_ubs))
     print("Total run time: {}".format(datetime.datetime.now()-start))

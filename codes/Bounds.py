@@ -6,7 +6,7 @@
 @Desc:
 """
 from BOM import BOMSerial
-from utils import TreeTypeException, InfoMissException, BCMethodException, CDFsimulation
+from utils import TreeTypeException, InfoMissException, BCMethodException, CDFsimulation, inverse_compound
 from math import sqrt, ceil, floor, isnan, isinf
 from scipy.stats import norm
 from Config import ConfigX
@@ -32,7 +32,8 @@ def cal_base_stock(l, theta, method="approximation"):
         return lam*params[0]*l + z*sqrt(lam*(params[0]**2 + params[1]**2)*l)
 
     elif str.lower(method) == "simulation":
-        return quantile[lam*l][round(theta, 4)]
+        # return quantile[lam*l][round(theta, 4)]
+        return inverse_compound(theta, lam*l, params, "normal", 20000)
 
     # Compute using simulation data
     else:
@@ -75,15 +76,14 @@ def bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0, method="appr
     print("theta_jus: {}".format(theta_jus))
     print("CLjs:  {}".format(CLjs))
 
-    print("Simulation begin .........")
-
-    start = datetime.datetime.now()
-    if method == "simulation":
-        for clj in set(CLjs):
-            print("Current processing cumulative lead time: {}".format(clj))
-            quantile[clj*lam] = CDFsimulation(clj*lam, params, distrib, 2000)
-    print("Simulation done .........")
-    print("Simulation run time: {}".format(datetime.datetime.now()-start))
+    # print("Simulation begin .........")
+    # start = datetime.datetime.now()
+    # if method == "simulation":
+    #     for clj in set(CLjs):
+    #         print("Current processing cumulative lead time: {}".format(clj))
+    #         quantile[clj*lam] = CDFsimulation(clj*lam, params, distrib, 2000)
+    # print("Simulation done .........")
+    # print("Simulation run time: {}".format(datetime.datetime.now()-start))
 
     lbs = [cal_base_stock(x, y, method) for x, y in zip(CLjs, theta_jls)]
     ubs = [cal_base_stock(x, y, method) for x, y in zip(CLjs, theta_jus)]
