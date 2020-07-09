@@ -8,7 +8,10 @@
 import matplotlib.pyplot as plt
 import networkx as nx
 from networkx.drawing.nx_agraph import write_dot, graphviz_layout
-from Config import ConfigX
+import numpy as np
+import seaborn as sns
+import pickle
+import os
 
 
 class NodeTypeException(Exception):
@@ -26,6 +29,12 @@ class TreeTypeException(Exception):
 class InfoMissException(Exception):
     def __init__(self):
         err = 'Miss echelon holding costs, recalculate by setting mode=0.'
+        Exception.__init__(self, err)
+
+
+class BCMethodException(Exception):
+    def __init__(self):
+        err = 'Methods to calculate bounds only allows "approximation" and "simulation".'
         Exception.__init__(self, err)
 
 
@@ -130,3 +139,44 @@ def BOM_plot(BOM):
 
     plt.show()
 
+
+def CDFsimulation(lamda, parameters, distrib="normal", n_sample=20000):
+    """
+     parameters and distrib:
+    - beta: a, b
+    - gamma: alpha, lamda
+    - normal: loc, scale
+    - uniform: low, high
+    - exponential: scale
+    """
+    quantile = {}
+
+    arrivals = np.random.poisson(lamda, n_sample)
+    print("Distribution: {}".format(distrib))
+    if distrib == "normal":
+        machine = np.random.normal
+    if distrib == "uniform":
+        machine = np.random.uniform
+    if distrib == "beta":
+        machine = np.random.beta
+    if distrib == "gamma":
+        machine = np.random.gamma
+    if distrib == "exp":
+        machine = np.random.exponential
+        parameters = [parameters[0]]
+
+    demands = []
+    for arrival in arrivals:
+        count = 0
+        if arrival == 0:
+            demands.append(count)
+        else:
+            samples = machine(*parameters, arrival)
+            demands.append(np.sum(samples))
+
+    for quantile_point in np.arange(0, 1, 0.0001):   # precision: four decimal places.
+        quantile_point = round(quantile_point, 4)
+        quantile[quantile_point] = np.quantile(demands, quantile_point)
+    quantile[1.0000] = np.quantile(demands, 1)
+
+    return quantile

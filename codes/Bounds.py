@@ -6,55 +6,64 @@
 @Desc:
 """
 from BOM import BOMSerial
-from utils import TreeTypeException, InfoMissException
+from utils import TreeTypeException, InfoMissException, BCMethodException, CDFsimulation
 from math import sqrt, ceil, floor, isnan, isinf
 from scipy.stats import norm
 from Config import ConfigX
+import datetime
 
 conf = ConfigX()
-mu = conf.mu
 lam = conf.lam
-sigma = conf.sigma
+params = conf.parameters
 capacity = conf.capacity
+distrib = conf.distribution
+quantile = {}
 
-
-def cal_base_stock(l, z):
-    global mu
+def cal_base_stock(l, theta, method="approximation"):
     global lam
-    global sigma
+    global params
+    global distrib
+    global quantile
 
-    return lam*mu*l + z*sqrt(lam*(mu**2 + sigma**2)*l)
+    if str.lower(method) == "approximation":
+
+        # Compute using normal approximations
+        z = norm.ppf(theta)
+        return lam*params[0]*l + z*sqrt(lam*(params[0]**2 + params[1]**2)*l)
+
+    elif str.lower(method) == "simulation":
+        return quantile[lam*l][round(theta, 4)]
+
+    # Compute using simulation data
+    else:
+        raise BCMethodException()
 
 
-def poisson_bounds(lead_times, echelon_holding_costs, penalty_cost):
+def bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0, method="approximation"):
     """
-    TODO
-
-    Question: how to calculate the inverse of cdf of compound poisson distribution? Simulation?
-    """
-    pass
-
-
-def normal_bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0):
-    """
-
     :param mode: 0 - rounding up; 1 - rounding down; 2 - no rounding
     :param penalty_cost: backorder cost
     :param lead_times: transportation time for node i to its successor.
                         Differ from the definition on lead time in Song et.al (2003)
     :param echelon_holding_costs: same as the definition in Song et.al (2003)
-    :return: lower bounds and upper bounds with normal distribution approximation
+    :param method: "approximation": normal approximation;
+                      "simulation": using simulation
+        :return: lower bounds and upper bounds
     """
-
+    global lam
+    global params
+    global distrib
+    global quantile
     # Cumulative lead time,
     # notice the difference on the definition of lead time in Song et.al (2003)
-    Ljs = []
+
+    CLjs = []
     theta_jls = []
     theta_jus = []
 
     for j in range(len(echelon_holding_costs)):
-        Lj = sum(lead_times[j:])
-        Ljs.append(Lj)
+        CLj = sum(lead_times[j:])
+        CLjs.append(CLj)
         theta_jl = (penalty_cost + sum(echelon_holding_costs[0: j])) / \
                    (penalty_cost + sum(echelon_holding_costs))
         theta_jls.append(theta_jl)
@@ -62,22 +71,26 @@ def normal_bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0):
                    (penalty_cost + sum(echelon_holding_costs[0: j+1]))
         theta_jus.append(theta_ju)
 
-    zjls = [norm.ppf(x) for x in theta_jls]
-    zjus = [norm.ppf(x) for x in theta_jus]
-
     print("theta_jls: {}".format(theta_jls))
     print("theta_jus: {}".format(theta_jus))
-    print("zjls: {}".format(zjls))
-    print("zjus: {}".format(zjus))
-    print("Ljs:  {}".format(Ljs))
+    print("CLjs:  {}".format(CLjs))
 
-    lbs = [cal_base_stock(x, y) for x, y in zip(Ljs, zjls)]
-    ubs = [cal_base_stock(x, y) for x, y in zip(Ljs, zjus)]
-    # cost_lb = None
-    # cost_ub = None
+    print("Simulation begin .........")
+
+    start = datetime.datetime.now()
+    if method == "simulation":
+        for clj in set(CLjs):
+            print("Current processing cumulative lead time: {}".format(clj))
+            quantile[clj*lam] = CDFsimulation(clj*lam, params, distrib, 2000)
+    print("Simulation done .........")
+    print("Simulation run time: {}".format(datetime.datetime.now()-start))
+
+    lbs = [cal_base_stock(x, y, method) for x, y in zip(CLjs, theta_jls)]
+    ubs = [cal_base_stock(x, y, method) for x, y in zip(CLjs, theta_jus)]
+    print("Lower bounds: {}".format(lbs))
+    print("Upper bounds: {}".format(ubs))
+
     try:
-        print("Normal approximation of Lower bounds: {}".format(lbs))
-        print("Normal approximation of Upper bounds: {}".format(ubs))
         if mode == 0:
             return [ceil(x) for x in lbs], [ceil(x) for x in ubs]
         elif mode == 1:
@@ -90,8 +103,8 @@ def normal_bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0):
         print("|--------------------------------------------------------------------------------------------------|")
         lbs = [capacity if isnan(x) or isinf(x) else x for x in lbs]
         ubs = [capacity if isnan(x) or isinf(x) else x for x in ubs]
-        print("Modified normal approximation of lower bounds: {}".format(lbs))
-        print("Modified normal approximation of uppers bounds: {}".format(ubs))
+        print("Modified lower bounds: {}".format(lbs))
+        print("Modified uppers bounds: {}".format(ubs))
         if mode == 0:
             return [ceil(x) for x in lbs], [ceil(x) for x in ubs]
         elif mode == 1:
@@ -109,8 +122,10 @@ def cacl_echelon_holding_cost(node):
     return node.holding_cost - pred_holding_cost
 
 
-def calc_bounds(serial, recalc=False):
+def calc_bounds(serial, recalc=False, method="approximation"):
     """"
+    :param method: "approximation": normal approximation;
+                      "simulation": using simulation
     :param recalc: False - need not calculate echelon holding cost;
                  otherwise - recalculate echelon holding cost.
     :return: lower and upper bounds of echelon base stock levels
@@ -157,10 +172,12 @@ def calc_bounds(serial, recalc=False):
     print("Installation lead times: {}".format(lead_time_list))
     print("Penalty cost: {}".format(serial.root.penalty_cost))
     print("-----------------------------------------------------------------------------")
-    normal_lbs, normal_ubs = normal_bounds(lead_times=lead_time_list,
-                                           echelon_holding_costs=echelon_holding_cost_list,
-                                           penalty_cost=serial.root.penalty_cost)
-    return normal_lbs, normal_ubs
+
+    lbs, ubs = bounds(lead_times=lead_time_list,
+                      echelon_holding_costs=echelon_holding_cost_list,
+                      penalty_cost=serial.root.penalty_cost,
+                      method=method)
+    return lbs, ubs
 
 
 if __name__ == "__main__":
@@ -173,7 +190,7 @@ if __name__ == "__main__":
     """
     echelon_holding_cost_list = [0.0001, 2.5, 2.5, 2.5, 2.5, 0.0001]
     penalty_cost = 99
-    lbs, ubs = normal_bounds(lead_time_list, echelon_holding_cost_list, penalty_cost)
+    lbs, ubs = bounds(lead_time_list, echelon_holding_cost_list, penalty_cost)
     print("Rounding lbs: {}".format(lbs))
     print("Rounding ubs: {}".format(ubs))
 

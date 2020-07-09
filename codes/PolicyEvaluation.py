@@ -19,7 +19,7 @@ def policy_evaluation(base_stocks, holding_costs, lead_times, penalty_cost):
     # lead_times.insert(0, 0)
     holding_costs = holding_costs[1:]
     conf = ConfigX()
-    unit_demand = conf.mu * conf.lam
+    unit_demand = conf.parameters[0] * conf.lam
     total_installations = len(base_stocks)
 
     def cal_cost_recursion(res, i):
