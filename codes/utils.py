@@ -147,16 +147,14 @@ def quantile_table(demands, decimal):
     :param decimal
     :return: quantile table
     """
-    quantile = {}
+    quantile_table = {}
     solve_quantile = np.quantile
 
-    def process(quantile_point):
-        quantile_point = round(quantile_point, decimal)
-        quantile[quantile_point] = solve_quantile(demands, quantile_point)
+    quantile_points = np.around(np.concatenate((np.arange(0, 1, 1 / (10 ** decimal)), [1])), decimal)
+    quantiles = solve_quantile(demands, quantile_points)
+    quantile_table = dict(zip(quantile_points, quantiles))
 
-    [process(quantile_point) for quantile_point in np.arange(0, 1, 1/(10**decimal))]  # precision: four decimal places.
-    quantile[1.0000] = np.quantile(demands, 1)
-    return quantile
+    return quantile_table
 
 
 def CDFsimulation(lamda, parameters, decimal=4, distrib="normal", n_sample=20000):
@@ -243,7 +241,7 @@ def inverse_compound(quantile, lamda, parameters,
     return np.quantile(demands, quantile)
 
 
-if __name__ =="__main__":
+if __name__ == "__main__":
     print("Simulation begin .........")
     start = datetime.datetime.now()
     CLjs = [6, 6, 5, 4, 0]
@@ -257,9 +255,9 @@ if __name__ =="__main__":
     if method == "simulation":
         for clj in set(CLjs):
             print("Current processing cumulative lead time: {}".format(clj))
-            quantile[clj*lam] = CDFsimulation(clj*lam, params, dec)
+            quantile[clj * lam] = CDFsimulation(clj * lam, params, dec)
     print("Simulation done .........")
-    print("Simulation run time: {}".format(datetime.datetime.now()-start))
+    print("Simulation run time: {}".format(datetime.datetime.now() - start))
     with open("simulation_table", "wb") as f:
         pickle.dump(quantile, f)
 
