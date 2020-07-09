@@ -12,6 +12,7 @@ import numpy as np
 import seaborn as sns
 import pickle
 import os
+import datetime
 
 
 class NodeTypeException(Exception):
@@ -215,7 +216,6 @@ def inverse_compound(quantile, lamda, parameters,
         else:
             samples = machine(*parameters, arrival)
             demands.append(np.sum(samples))
-    print(demands)
     sns.distplot(demands)
 
     if quantile < 0:
@@ -225,5 +225,27 @@ def inverse_compound(quantile, lamda, parameters,
     plt.scatter([np.quantile(demands, quantile)], [0], s=[100], c='r', marker='o')
     if show:
         plt.show()
+    return np.quantile(demands, quantile)
 
-    return np.int(np.quantile(demands, quantile))
+
+if __name__ =="__main__":
+    print("Simulation begin .........")
+    start = datetime.datetime.now()
+    CLjs = [6.0001, 6.0001, 5.0001, 4.0001, 0.0001]
+    lam = 16
+    method = "simulation"
+    quantile = {}
+    params = (1, 0)
+
+    if method == "simulation":
+        for clj in set(CLjs):
+            print("Current processing cumulative lead time: {}".format(clj))
+            quantile[clj*lam] = CDFsimulation(clj*lam, params)
+    print("Simulation done .........")
+    print("Simulation run time: {}".format(datetime.datetime.now()-start))
+    with open("simulation_table", "wb") as f:
+        pickle.dump(quantile, f)
+
+    with open("simulation_table", "rb") as f:
+        data = pickle.load(f)
+    print(data[0.0016])

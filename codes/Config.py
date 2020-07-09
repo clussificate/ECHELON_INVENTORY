@@ -16,4 +16,6 @@ class ConfigX:
         self.lam = 16       # unit arrival rate
         self.distribution = "normal"
         self.parameters = (1, 0)  # parameters of distribution function
+        self.samples = 20000      # number of simulation samples
+
         self.capacity = 500  # maximal capacity of installations
