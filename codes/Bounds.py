@@ -6,7 +6,7 @@
 @Desc:
 """
 from BOM import BOMSerial
-from utils import TreeTypeException, InfoMissException, BCMethodException, CDFsimulation, inverse_compound
+from utils import TreeTypeException, InfoMissException, BCMethodException
 from math import sqrt, ceil, floor, isnan, isinf
 from scipy.stats import norm
 from Config import ConfigX
@@ -17,29 +17,29 @@ lam = conf.lam
 params = conf.parameters
 distrib = conf.distribution
 samples = conf.samples
+decimal = conf.decimal
+capacity = conf.capacity
 
 with open("simulation_table", "rb") as f:
     quantile = pickle.load(f)
 
-def cal_base_stock(l, theta, method="approximation"):
-    global lam
-    global params
-    global distrib
-    global quantile
+
+def cal_base_stock(CLj, theta, method="approximation"):
 
     if str.lower(method) == "approximation":
 
         # Compute using normal approximations
         z = norm.ppf(theta)
-        return lam*params[0]*l + z*sqrt(lam*(params[0]**2 + params[1]**2)*l)
+        return lam * params[0] * CLj + z * sqrt(lam * (params[0] ** 2 + params[1] ** 2) * CLj)
 
     elif str.lower(method) == "simulation":
         # print("lam*l: {}".format(lam*l))
         # print("quantile: {}".format(quantile[lam*l][round(theta, 4)]))
-        return quantile[lam*l][round(theta, 4)]
         # return inverse_compound(theta, lam*l, params, "normal", samples)
-
-    # Compute using simulation data
+        if CLj != 0:
+            return quantile[lam * CLj][round(theta, decimal)]
+        else:
+            return 0
     else:
         raise BCMethodException()
 
@@ -55,9 +55,6 @@ def bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0, method="appr
                       "simulation": using simulation
         :return: lower bounds and upper bounds
     """
-    global lam
-    global params
-    global distrib
     # Cumulative lead time,
     # notice the difference on the definition of lead time in Song et.al (2003)
 

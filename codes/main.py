@@ -48,7 +48,7 @@ if __name__ == "__main__":
     number: original sequences
     label: sequences after labeling procedure.
     """
-    root = {"lead_time": 0.0001, "holding_cost": 0.7, "penalty_cost": 9, "successor": None, "predecessors": [1, 2],
+    root = {"lead_time": 0, "holding_cost": 0.7, "penalty_cost": 9, "successor": None, "predecessors": [1, 2],
             "number": 0}
     node1 = {"lead_time": 1, "holding_cost": 0.2, "successor": 0, "predecessors": [3, 4], "number": 1}
     node2 = {"lead_time": 4, "holding_cost": 0.4, "successor": 0, "predecessors": [5, 6], "number": 2}

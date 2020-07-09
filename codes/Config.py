@@ -17,5 +17,6 @@ class ConfigX:
         self.distribution = "normal"
         self.parameters = (1, 0)  # parameters of distribution function
         self.samples = 20000      # number of simulation samples
+        self.decimal = 4          # precision of quantile points.
 
         self.capacity = 500  # maximal capacity of installations

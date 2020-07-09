@@ -11,9 +11,8 @@ from networkx.drawing.nx_agraph import write_dot, graphviz_layout
 import numpy as np
 import seaborn as sns
 import pickle
-import os
 import datetime
-
+from Config import ConfigX
 
 class NodeTypeException(Exception):
     def __init__(self):
@@ -141,7 +140,25 @@ def BOM_plot(BOM):
     plt.show()
 
 
-def CDFsimulation(lamda, parameters, distrib="normal", n_sample=20000):
+def quantile_table(demands, decimal):
+    """
+    :param demands
+    :param decimal
+    :return: quantile table
+    """
+    quantile = {}
+    solve_quantile = np.quantile
+
+    def process(quantile_point):
+        quantile_point = round(quantile_point, decimal)
+        quantile[quantile_point] = solve_quantile(demands, quantile_point)
+
+    [process(quantile_point) for quantile_point in np.arange(0, 1, 1/(10**decimal))]  # precision: four decimal places.
+    quantile[1.0000] = np.quantile(demands, 1)
+    return quantile
+
+
+def CDFsimulation(lamda, parameters, decimal=4, distrib="normal", n_sample=20000):
     """
      parameters and distrib:
     - beta: a, b
@@ -150,8 +167,8 @@ def CDFsimulation(lamda, parameters, distrib="normal", n_sample=20000):
     - uniform: low, high
     - exponential: scale
     """
-    quantile = {}
 
+    machine = ""
     arrivals = np.random.poisson(lamda, n_sample)
     print("Distribution: {}".format(distrib))
     if distrib == "normal":
@@ -175,10 +192,7 @@ def CDFsimulation(lamda, parameters, distrib="normal", n_sample=20000):
             samples = machine(*parameters, arrival)
             demands.append(np.sum(samples))
 
-    for quantile_point in np.arange(0, 1, 0.0001):   # precision: four decimal places.
-        quantile_point = round(quantile_point, 4)
-        quantile[quantile_point] = np.quantile(demands, quantile_point)
-    quantile[1.0000] = np.quantile(demands, 1)
+    quantile = quantile_table(demands, decimal)
 
     return quantile
 
@@ -231,16 +245,18 @@ def inverse_compound(quantile, lamda, parameters,
 if __name__ =="__main__":
     print("Simulation begin .........")
     start = datetime.datetime.now()
-    CLjs = [6.0001, 6.0001, 5.0001, 4.0001, 0.0001]
-    lam = 16
+    CLjs = [6, 6, 5, 4, 0]
+    conf = ConfigX()
+    lam = conf.lam
     method = "simulation"
     quantile = {}
-    params = (1, 0)
+    params = conf.parameters
+    dec = conf.decimal
 
     if method == "simulation":
         for clj in set(CLjs):
             print("Current processing cumulative lead time: {}".format(clj))
-            quantile[clj*lam] = CDFsimulation(clj*lam, params)
+            quantile[clj*lam] = CDFsimulation(clj*lam, params, dec)
     print("Simulation done .........")
     print("Simulation run time: {}".format(datetime.datetime.now()-start))
     with open("simulation_table", "wb") as f:
@@ -248,4 +264,4 @@ if __name__ =="__main__":
 
     with open("simulation_table", "rb") as f:
         data = pickle.load(f)
-    print(data[0.0016])
+    print(data[0])
