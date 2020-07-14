@@ -5,7 +5,7 @@
 @file:main.py
 @Desc:
 """
-import datetime
+import time
 from Bounds import calc_bounds
 from utils import *
 from BOM import BOMTree, serial_merge
@@ -58,12 +58,11 @@ if __name__ == "__main__":
     node6 = {"lead_time": 2, "holding_cost": 0.2, "successor": 2, "predecessors": None, "number": 6}
     Json = {0: root, 1: node1, 2: node2, 3: node3, 4: node4, 5: node5, 6: node6, "leaves": [3, 4, 5, 6], "root": 0}
 
-    start = datetime.datetime.now()
-    serial = assembly_to_serial(Json=Json, mode=1, show=True)
-    print("Transformation run time: {}".format(datetime.datetime.now()-start))
+    start = time.time()
+    serial = assembly_to_serial(Json=Json, mode=1, show=False)
+    print("Transformation run time: {:.8f} seconds".format(time.time()-start))
     # print("serial nodes: {}".format(serial.nodes))
     # print("serial successor: {}".format(serial.leaves[0].successor.number))
-    dict_bounds = calc_bounds(serial, method="simulation", gene_table=True)
-
+    dict_bounds = calc_bounds(serial, method="simulation", gene_table=False)
     print("Rounding bound dictionary: {}".format(dict_bounds))
-    print("Total run time: {}".format(datetime.datetime.now()-start))
+    print("Total run time: {:.8f} seconds".format(time.time()-start))
