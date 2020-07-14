@@ -59,11 +59,11 @@ if __name__ == "__main__":
     Json = {0: root, 1: node1, 2: node2, 3: node3, 4: node4, 5: node5, 6: node6, "leaves": [3, 4, 5, 6], "root": 0}
 
     start = datetime.datetime.now()
-    serial = assembly_to_serial(Json=Json, mode=1)
+    serial = assembly_to_serial(Json=Json, mode=1, show=True)
     print("Transformation run time: {}".format(datetime.datetime.now()-start))
     # print("serial nodes: {}".format(serial.nodes))
     # print("serial successor: {}".format(serial.leaves[0].successor.number))
-    dict_bounds = calc_bounds(serial, method="simulation")
+    dict_bounds = calc_bounds(serial, method="simulation", gene_table=True)
 
     print("Rounding bound dictionary: {}".format(dict_bounds))
     print("Total run time: {}".format(datetime.datetime.now()-start))

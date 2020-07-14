@@ -6,11 +6,12 @@
 @Desc:
 """
 from BOM import BOMSerial
-from utils import TreeTypeException, InfoMissException, BCMethodException
+from utils import TreeTypeException, InfoMissException, BCMethodException, CDFsimulation
 from math import sqrt, ceil, floor, isnan, isinf
 from scipy.stats import norm
 from Config import ConfigX
 import pickle
+import datetime
 
 conf = ConfigX()
 lam = conf.lam
@@ -19,6 +20,7 @@ distrib = conf.distribution
 samples = conf.samples
 decimal = conf.decimal
 capacity = conf.capacity
+dec = conf.decimal
 
 with open("simulation_table", "rb") as f:
     quantile = pickle.load(f)
@@ -51,7 +53,7 @@ def cal_base_stock(CLj, theta, method="approximation"):
         raise BCMethodException()
 
 
-def Bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0, method="approximation"):
+def Bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0, method="approximation", gene_table=False):
     """
     :param mode: 0 - rounding up; 1 - rounding down; 2 - no rounding
     :param penalty_cost: backorder cost
@@ -82,6 +84,17 @@ def Bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0, method="appr
     print("theta_jls: {}".format(theta_jls))
     print("theta_jus: {}".format(theta_jus))
     print("CLjs:  {}".format(CLjs))
+
+    start = datetime.datetime.now()
+    if gene_table:
+        for clj in set(CLjs):
+            print("Current processing cumulative lead time: {}".format(clj))
+            quantile[clj * lam] = CDFsimulation(clj * lam, params, dec)
+    print("Simulation done .........")
+    print("Simulation run time: {}".format(datetime.datetime.now() - start))
+
+    with open("simulation_table", "wb") as f:
+        pickle.dump(quantile, f)
 
     lbs = [cal_base_stock(x, y, method) for x, y in zip(CLjs, theta_jls)]
     ubs = [cal_base_stock(x, y, method) for x, y in zip(CLjs, theta_jus)]
@@ -127,7 +140,7 @@ def cacl_echelon_holding_cost(node):
     return node.holding_cost - pred_holding_cost
 
 
-def calc_bounds(serial, recalc=False, method="approximation"):
+def calc_bounds(serial, recalc=False, method="approximation", gene_table=False):
     """"
     :param method: "approximation": normal approximation;
                       "simulation": using simulation
@@ -185,7 +198,7 @@ def calc_bounds(serial, recalc=False, method="approximation"):
     lbs, ubs = Bounds(lead_times=lead_time_list,
                       echelon_holding_costs=echelon_holding_cost_list,
                       penalty_cost=serial.root.penalty_cost,
-                      method=method)
+                      method=method,gene_table = gene_table)
 
     dict_bound = dict(zip(node_number, [x for x in zip(lbs, ubs)]))
 

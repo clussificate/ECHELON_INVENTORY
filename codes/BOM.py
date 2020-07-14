@@ -255,6 +255,11 @@ class BOMTree(BOMSerial):
                 current_node.lead_time = current_node.lead_time + merge_node.lead_time
 
                 current_node.holding_cost = None
+
+                for i, pre in enumerate(predecessors):
+                    if i != ind:
+                        pre.lead_time = pre.lead_time - merge_node.lead_time
+
                 current_node.predecessors.extend(merge_node.predecessors)
                 current_node.predecessors.remove(merge_node)
 
