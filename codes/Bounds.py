@@ -29,22 +29,29 @@ def cal_base_stock(CLj, theta, method="approximation"):
     if str.lower(method) == "approximation":
 
         # Compute using normal approximations
-        z = norm.ppf(theta)
-        return lam * params[0] * CLj + z * sqrt(lam * (params[0] ** 2 + params[1] ** 2) * CLj)
+        if theta < 1:
+            z = norm.ppf(theta)
+            return lam * params[0] * CLj + z * sqrt(lam * (params[0] ** 2 + params[1] ** 2) * CLj)
+        else:
+            # if quantile point is more than 1, we use simulation table to calculate its quantile value
+            return quantile[lam*CLj][1]
 
     elif str.lower(method) == "simulation":
         # print("lam*l: {}".format(lam*l))
         # print("quantile: {}".format(quantile[lam*l][round(theta, 4)]))
         # return inverse_compound(theta, lam*l, params, "normal", samples)
         if CLj != 0:
-            return quantile[lam * CLj][round(theta, decimal)]
+            if theta < 1:
+                return quantile[lam * CLj][round(theta, decimal)]
+            else:
+                return quantile[lam * CLj][round(1, decimal)]
         else:
             return 0
     else:
         raise BCMethodException()
 
 
-def bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0, method="approximation"):
+def Bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0, method="approximation"):
     """
     :param mode: 0 - rounding up; 1 - rounding down; 2 - no rounding
     :param penalty_cost: backorder cost
@@ -81,27 +88,34 @@ def bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0, method="appr
     print("Lower bounds: {}".format(lbs))
     print("Upper bounds: {}".format(ubs))
 
-    try:
-        if mode == 0:
-            return [ceil(x) for x in lbs], [ceil(x) for x in ubs]
-        elif mode == 1:
-            return [floor(x) for x in lbs], [floor(x) for x in ubs]
-        else:
-            return lbs, ubs
-    except (OverflowError, ValueError):
-        print("|--------------------------------------------------------------------------------------------------|")
-        print("|----Some installations are Inf or NaN value, set the base stock bounds as the maximal capacity----|")
-        print("|--------------------------------------------------------------------------------------------------|")
-        lbs = [capacity if isnan(x) or isinf(x) else x for x in lbs]
-        ubs = [capacity if isnan(x) or isinf(x) else x for x in ubs]
-        print("Modified lower bounds: {}".format(lbs))
-        print("Modified uppers bounds: {}".format(ubs))
-        if mode == 0:
-            return [ceil(x) for x in lbs], [ceil(x) for x in ubs]
-        elif mode == 1:
-            return [floor(x) for x in lbs], [floor(x) for x in ubs]
-        else:
-            return lbs, ubs
+    if mode == 0:
+        return [ceil(x) for x in lbs], [ceil(x) for x in ubs]
+    elif mode == 1:
+        return [floor(x) for x in lbs], [floor(x) for x in ubs]
+    else:
+        return lbs, ubs
+
+    # try:
+    #     if mode == 0:
+    #         return [ceil(x) for x in lbs], [ceil(x) for x in ubs]
+    #     elif mode == 1:
+    #         return [floor(x) for x in lbs], [floor(x) for x in ubs]
+    #     else:
+    #         return lbs, ubs
+    # except (OverflowError, ValueError):
+    #     print("|--------------------------------------------------------------------------------------------------|")
+    #     print("|----Some installations are Inf or NaN value, set the base stock bounds as 100% quantile----|")
+    #     print("|--------------------------------------------------------------------------------------------------|")
+    #     lbs = [capacity if isnan(x) or isinf(x) else x for x in lbs]
+    #     ubs = [capacity if isnan(x) or isinf(x) else x for x in ubs]
+    #     print("Modified lower bounds: {}".format(lbs))
+    #     print("Modified uppers bounds: {}".format(ubs))
+    #     if mode == 0:
+    #         return [ceil(x) for x in lbs], [ceil(x) for x in ubs]
+    #     elif mode == 1:
+    #         return [floor(x) for x in lbs], [floor(x) for x in ubs]
+    #     else:
+    #         return lbs, ubs
 
 
 def cacl_echelon_holding_cost(node):
@@ -127,6 +141,7 @@ def calc_bounds(serial, recalc=False, method="approximation"):
     # initial lists with the first dummy node
     lead_time_list = [0]
     echelon_holding_cost_list = []
+    node_number = []
 
     # recalculate echelon holding cost
     if recalc:
@@ -136,6 +151,7 @@ def calc_bounds(serial, recalc=False, method="approximation"):
 
         echelon_holding_cost_list.append(current_node.echelon_holding_cost)
         lead_time_list.append(current_node.lead_time)
+        node_number.append(current_node.number)
 
         current_node = current_node.successor
         # print("Successor of Leaf node: {}".format(current_node.number))
@@ -143,6 +159,7 @@ def calc_bounds(serial, recalc=False, method="approximation"):
             current_node.echelon_holding_cost = cacl_echelon_holding_cost(current_node)
             echelon_holding_cost_list.append(current_node.echelon_holding_cost)
             lead_time_list.append(current_node.lead_time)
+            node_number.append(current_node.number)
             current_node = current_node.successor
 
         print("----------------Recalculate echelon holding cost: done----------------------")
@@ -154,6 +171,7 @@ def calc_bounds(serial, recalc=False, method="approximation"):
 
             echelon_holding_cost_list.append(current_node.echelon_holding_cost)
             lead_time_list.append(current_node.lead_time)
+            node_number.append(current_node.number)
             current_node = current_node.successor
 
     # initial lists with the second dummy node
@@ -164,11 +182,14 @@ def calc_bounds(serial, recalc=False, method="approximation"):
     print("Penalty cost: {}".format(serial.root.penalty_cost))
     print("-----------------------------------------------------------------------------")
 
-    lbs, ubs = bounds(lead_times=lead_time_list,
+    lbs, ubs = Bounds(lead_times=lead_time_list,
                       echelon_holding_costs=echelon_holding_cost_list,
                       penalty_cost=serial.root.penalty_cost,
                       method=method)
-    return lbs, ubs
+
+    dict_bound = dict(zip(node_number, [x for x in zip(lbs, ubs)]))
+
+    return dict_bound
 
 
 if __name__ == "__main__":
@@ -181,7 +202,7 @@ if __name__ == "__main__":
     """
     echelon_holding_cost_list = [0.0001, 2.5, 2.5, 2.5, 2.5, 0.0001]
     penalty_cost = 99
-    lbs, ubs = bounds(lead_time_list, echelon_holding_cost_list, penalty_cost)
+    lbs, ubs = Bounds(lead_time_list, echelon_holding_cost_list, penalty_cost)
     print("Rounding lbs: {}".format(lbs))
     print("Rounding ubs: {}".format(ubs))
 

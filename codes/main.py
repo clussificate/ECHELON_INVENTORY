@@ -61,10 +61,9 @@ if __name__ == "__main__":
     start = datetime.datetime.now()
     serial = assembly_to_serial(Json=Json, mode=1)
     print("Transformation run time: {}".format(datetime.datetime.now()-start))
-
     # print("serial nodes: {}".format(serial.nodes))
     # print("serial successor: {}".format(serial.leaves[0].successor.number))
-    normal_lbs, normal_ubs = calc_bounds(serial, method="simulation")
-    print("Rounding lower bounds: {}".format(normal_lbs))
-    print("Rounding upper bounds: {}".format(normal_ubs))
+    dict_bounds = calc_bounds(serial, method="simulation")
+
+    print("Rounding bound dictionary: {}".format(dict_bounds))
     print("Total run time: {}".format(datetime.datetime.now()-start))

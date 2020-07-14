@@ -86,7 +86,7 @@ class BOMTree(BOMSerial):
         queue = Queue()
         root_json = NodeJson[NodeJson['root']]  # get root node json
         root = Root(lead_time=root_json["lead_time"], penalty_cost=root_json["penalty_cost"],
-                    holding_cost=root_json["holding_cost"], number=root_json["number"])
+                    holding_cost=root_json["holding_cost"], number=str(root_json["number"]))
         queue.push(root)
         #         print(queue.list[0])
         self.root = root
@@ -99,7 +99,7 @@ class BOMTree(BOMSerial):
             print("Process node number: {} ".format(current_node.number))
             self.nodes[str(current_node.number)] = current_node
             #             print(current_node.number)
-            node_json = NodeJson[current_node.number]  # get root node json
+            node_json = NodeJson[int(current_node.number)]  # get root node json
 
             if node_json["predecessors"]:  # non-leaf node
                 predecessors_cost = 0
@@ -107,7 +107,7 @@ class BOMTree(BOMSerial):
                     predecessor_json = NodeJson[predecessor_number]
                     predecessor = Node(lead_time=predecessor_json["lead_time"],
                                        holding_cost=predecessor_json["holding_cost"],
-                                       number=predecessor_json["number"])
+                                       number=str(predecessor_json["number"]))
                     self.nodes[str(predecessor.number)] = predecessor.number
                     predecessors_cost += predecessor.holding_cost
 
@@ -169,8 +169,8 @@ class BOMTree(BOMSerial):
         for number, node in sorted_nodes:
             node.label = str(i)
             self.labeled_nodes[str(i)] = node
-            self.number_to_label[str(number)] = str(i)
-            self.label_to_number[str(i)] = str(number)
+            self.number_to_label[number] = str(i)
+            self.label_to_number[str(i)] = number
             i += 1
 
     def transform_to_serial_default(self):
@@ -249,7 +249,7 @@ class BOMTree(BOMSerial):
                 ehcs = [x.echelon_holding_cost for x in predecessors]
                 ind = ehcs.index(min(ehcs))  # index of the predecessor with minimal echelon holding cost
                 merge_node = predecessors[ind]
-                current_node.number = str(current_node.number) + ',' + str(merge_node.number)
+                current_node.number = current_node.number + ',' + merge_node.number
                 current_node.echelon_holding_cost = current_node.echelon_holding_cost + \
                                                     merge_node.echelon_holding_cost
                 current_node.lead_time = current_node.lead_time + merge_node.lead_time
@@ -265,7 +265,7 @@ class BOMTree(BOMSerial):
                 predecessor.successor = current_node
                 stack.push(predecessor)
 
-            self.nodes[str(current_node.number)] = current_node    # update current node
+            self.nodes[current_node.number] = current_node    # update current node
 
         self.leaf_warpper()
         serial = self.transform_to_serial_default()
@@ -313,7 +313,7 @@ def serial_merge(serial):
             print("current node: {}".format(current_node.number))
             current_node.echelon_holding_cost = current_node.echelon_holding_cost + successor.echelon_holding_cost
             current_node.holding_cost = None
-            current_node.number = str(current_node.number) + "," + str(successor.number)
+            current_node.number = current_node.number + "," + successor.number
             current_node.lead_time = successor.lead_time
             current_node.successor = successor.successor
             successor.successor.predecessors = [current_node]
