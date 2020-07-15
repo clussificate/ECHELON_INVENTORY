@@ -12,11 +12,10 @@ class ConfigX:
     The class define the parameters of demand process.
     """
 
-    def __init__(self):
-        self.lam = 16       # unit arrival rate
-        self.distribution = "normal"
-        self.parameters = (1, 0)  # parameters of distribution function
-        self.samples = 20000      # number of simulation samples
-        self.decimal = 4          # precision of quantile points.
+    def __init__(self, lam=16, distribution="normal", parameters=(10, 3), samples=2000, decimal=4):
+        self.lam = lam       # unit arrival rate
+        self.distribution = distribution
+        self.parameters = parameters  # parameters of distribution function
+        self.samples = samples      # number of simulation samples
+        self.decimal = decimal          # precision of quantile points.
 
-        self.capacity = 500  # maximal capacity of installations

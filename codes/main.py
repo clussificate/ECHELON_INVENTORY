@@ -63,6 +63,8 @@ if __name__ == "__main__":
     print("Transformation run time: {:.8f} seconds".format(time.time()-start))
     # print("serial nodes: {}".format(serial.nodes))
     # print("serial successor: {}".format(serial.leaves[0].successor.number))
-    dict_bounds = calc_bounds(serial, method="simulation", gene_table=False)
+
+    conf = ConfigX(lam=16, distribution='normal',parameters=(1, 0), samples=20000, decimal=4)
+    dict_bounds = calc_bounds(serial=serial, method="Simulation", gene_table=True, conf=conf)
     print("Rounding bound dictionary: {}".format(dict_bounds))
     print("Total run time: {:.8f} seconds".format(time.time()-start))

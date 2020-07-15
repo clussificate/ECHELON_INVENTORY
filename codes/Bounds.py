@@ -9,18 +9,8 @@ from BOM import BOMSerial
 from utils import TreeTypeException, InfoMissException, BCMethodException, CDFsimulation
 from math import sqrt, ceil, floor, isnan, isinf
 from scipy.stats import norm
-from Config import ConfigX
 import pickle
 import datetime
-
-conf = ConfigX()
-lam = conf.lam
-params = conf.parameters
-distrib = conf.distribution
-samples = conf.samples
-decimal = conf.decimal
-capacity = conf.capacity
-dec = conf.decimal
 
 with open("simulation_table", "rb") as f:
     quantile = pickle.load(f)
@@ -85,17 +75,16 @@ def Bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0, method="appr
     print("theta_jus: {}".format(theta_jus))
     print("CLjs:  {}".format(CLjs))
 
-    if gene_table:
+    if gene_table and str.lower(method) == "simulation":
         start = datetime.datetime.now()
         for clj in set(CLjs):
             print("Current processing cumulative lead time: {}".format(clj))
-            quantile[clj * lam] = CDFsimulation(clj * lam, params, dec)
+            quantile[clj * lam] = CDFsimulation(clj * lam, params, decimal)
         print("Simulation done .........")
         print("Simulation run time: {}".format(datetime.datetime.now() - start))
 
         with open("simulation_table", "wb") as f:
             pickle.dump(quantile, f)
-
 
     lbs = [cal_base_stock(x, y, method) for x, y in zip(CLjs, theta_jls)]
     ubs = [cal_base_stock(x, y, method) for x, y in zip(CLjs, theta_jus)]
@@ -141,16 +130,26 @@ def cacl_echelon_holding_cost(node):
     return node.holding_cost - pred_holding_cost
 
 
-def calc_bounds(serial, recalc=False, method="approximation", gene_table=False):
+def calc_bounds(serial, recalc=False, method="approximation", gene_table=False, conf=None):
     """"
+    :param conf: configure class which defines demand process
     :param method: "approximation": normal approximation;
                       "simulation": using simulation
     :param recalc: False - need not calculate echelon holding cost;
                  otherwise - recalculate echelon holding cost.
     :return: lower and upper bounds of echelon base stock levels
     """
+    global lam, params, distrib, samples, decimal
+
     if not isinstance(serial, BOMSerial):
         raise TreeTypeException()
+
+    lam = conf.lam
+    params = conf.parameters
+    distrib = conf.distribution
+    samples = conf.samples
+    decimal = conf.decimal
+
 
     # initial lists with the first dummy node
     lead_time_list = [0]
@@ -219,7 +218,7 @@ if __name__ == "__main__":
     """
     echelon_holding_cost_list = [0.0001, 2.5, 2.5, 2.5, 2.5, 0.0001]
     penalty_cost = 99
-    lbs, ubs = Bounds(lead_time_list, echelon_holding_cost_list, penalty_cost)
+    lbs, ubs = Bounds(lead_time_list, echelon_holding_cost_list, penalty_cost, 1, "Simulation",True)
     print("Rounding lbs: {}".format(lbs))
     print("Rounding ubs: {}".format(ubs))
 

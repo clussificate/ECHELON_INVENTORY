@@ -6,6 +6,8 @@
 @Desc:
 """
 from Bounds import cal_base_stock
+import  pickle
+
 
 CLj = 5
 theta = 1.2
@@ -13,3 +15,8 @@ method = "simulation"
 
 bs = cal_base_stock(CLj, theta, method)
 print(bs)
+
+with open("simulation_table", "rb") as f:
+    quantile = pickle.load(f)
+
+print(quantile)
