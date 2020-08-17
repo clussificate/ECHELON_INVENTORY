@@ -6,14 +6,56 @@
 @Desc:
 """
 from BOM import BOMSerial
+from Config import ConfigX
 from utils import TreeTypeException, InfoMissException, BCMethodException, CDFsimulation
 from math import sqrt, ceil, floor, isnan, isinf
 from scipy.stats import norm
 import pickle
 import datetime
+import numpy as np
+import seaborn as sns
+
+conf = ConfigX(lam=16, distribution='normal', parameters=(1, 0), samples=20000, decimal=4)
+lam, params, distrib, samples, decimal = conf.lam, conf.parameters, conf.distribution, conf.samples, conf.decimal
+
 
 with open("simulation_table", "rb") as f:
     quantile = pickle.load(f)
+
+
+def cal_quantiles(data, thetas, leadtimes, decimals=3, n_samples=10000, to_int=True):
+    if len(thetas) != len(leadtimes):
+        print("The length of thetas and leadtimes do not match")
+        return None
+
+    thetas = np.around(thetas, decimals=decimals)
+    leadtimes = np.array(leadtimes).astype(int)
+
+    n_quantiles = 10 ** decimals
+    quantile_mesh = np.linspace(0, 1, n_quantiles + 1)
+    init_quantiles = np.quantile(data, quantile_mesh)
+
+    max_lead = np.max(leadtimes)
+    ids_size = max_lead * n_samples
+    random_quantile_ids = np.random.randint(0, n_quantiles + 1, ids_size)
+    sampled_quantiles = init_quantiles[random_quantile_ids]
+
+    quantiles = []
+    for i in range(len(thetas)):
+        if leadtimes[i] == 0:
+            quantiles.append(0)
+            continue
+        n_to_cut = ids_size % leadtimes[i]
+        samples = sampled_quantiles[:(ids_size - n_to_cut)].reshape((leadtimes[i], -1))
+
+        samples = np.sum(samples, axis=0)
+        quantiles.append(np.quantile(samples, thetas[i]))
+    return quantiles
+
+
+def cal_base_stock_nonparametric(CLjs, thetas, data):
+    quantiles = cal_quantiles(data=data, thetas=thetas, leadtimes=CLjs)
+    return quantiles
 
 
 def cal_base_stock(CLj, theta, method="approximation"):
@@ -27,7 +69,6 @@ def cal_base_stock(CLj, theta, method="approximation"):
         else:
             # if quantile point is more than 1, we use simulation table to calculate its quantile value
             return quantile[lam*CLj][1]
-
     elif str.lower(method) == "simulation":
         # print("lam*l: {}".format(lam*l))
         # print("quantile: {}".format(quantile[lam*l][round(theta, 4)]))
@@ -43,8 +84,11 @@ def cal_base_stock(CLj, theta, method="approximation"):
         raise BCMethodException()
 
 
-def Bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0, method="approximation", gene_table=False):
+def Bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0,
+           method="approximation", gene_table=False, data=None):
     """
+    :param gene_table:
+    :param data:
     :param mode: 0 - rounding up; 1 - rounding down; 2 - no rounding
     :param penalty_cost: backorder cost
     :param lead_times: transportation time for node i to its successor.
@@ -52,6 +96,7 @@ def Bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0, method="appr
     :param echelon_holding_costs: same as the definition in Song et.al (2003)
     :param method: "approximation": normal approximation;
                       "simulation": using simulation
+                      "nonparametric": demand estimation using nonparametric method
         :return: lower bounds and upper bounds
     """
     # Cumulative lead time,
@@ -86,8 +131,13 @@ def Bounds(lead_times, echelon_holding_costs, penalty_cost, mode=0, method="appr
         with open("simulation_table", "wb") as f:
             pickle.dump(quantile, f)
 
-    lbs = [cal_base_stock(x, y, method) for x, y in zip(CLjs, theta_jls)]
-    ubs = [cal_base_stock(x, y, method) for x, y in zip(CLjs, theta_jus)]
+    if str.lower(method) in ["approximation", "simulation"]:
+        lbs = [cal_base_stock(x, y) for x, y in zip(CLjs, theta_jls)]
+        ubs = [cal_base_stock(x, y) for x, y in zip(CLjs, theta_jus)]
+    elif str.lower(method) == "nonparametric":
+        lbs = cal_base_stock_nonparametric(CLjs, theta_jls, data=data)
+        ubs = cal_base_stock_nonparametric(CLjs, theta_jus, data=data)
+
     print("Lower bounds: {}".format(lbs))
     print("Upper bounds: {}".format(ubs))
 
@@ -130,26 +180,26 @@ def cacl_echelon_holding_cost(node):
     return node.holding_cost - pred_holding_cost
 
 
-def calc_bounds(serial, recalc=False, method="approximation", gene_table=False, conf=None):
+def calc_bounds(serial, recalc=False, method="approximation", gene_table=False, conf=None, data=None):
     """"
+    :param recalc: False - need not calculate echelon holding cost;
+                 otherwise - recalculate echelon holding cost.
     :param conf: configure class which defines demand process
     :param method: "approximation": normal approximation;
                       "simulation": using simulation
-    :param recalc: False - need not calculate echelon holding cost;
-                 otherwise - recalculate echelon holding cost.
+                    "nonparametric": demand estimation using nonparametric method
+    :param data: required data for nonparametric demand estimation
     :return: lower and upper bounds of echelon base stock levels
     """
-    global lam, params, distrib, samples, decimal
-
     if not isinstance(serial, BOMSerial):
         raise TreeTypeException()
 
-    lam = conf.lam
-    params = conf.parameters
-    distrib = conf.distribution
-    samples = conf.samples
-    decimal = conf.decimal
-
+    if method != "nonparametric":
+        lam = conf.lam
+        params = conf.parameters
+        distrib = conf.distribution
+        samples = conf.samples
+        decimal = conf.decimal
 
     # initial lists with the first dummy node
     lead_time_list = [0]
@@ -199,7 +249,8 @@ def calc_bounds(serial, recalc=False, method="approximation", gene_table=False, 
     lbs, ubs = Bounds(lead_times=lead_time_list,
                       echelon_holding_costs=echelon_holding_cost_list,
                       penalty_cost=serial.root.penalty_cost,
-                      method=method,gene_table=gene_table)
+                      method=method, gene_table=gene_table,
+                      data=data)
 
     # print("Bounds calculate time: {}".format(datetime.datetime.now()-start))
 
@@ -212,13 +263,14 @@ if __name__ == "__main__":
     # notice: Due to the different definition on lead time in Song (2003),
     #         we need set two dummy nodes with sufficiently small holding cost,
     #         we also need set the lead time of root node to be zero.
-    lead_time_list = [0, 0.25, 0.25, 0.25, 0.25, 0]
+    Lead_time_list = [0, 0.25, 0.25, 0.25, 0.25, 0]
     """
     @ example: four stages serial system with L=0.25, h=2.5, lambda=16, see Song(2003) table 6. 
     """
-    echelon_holding_cost_list = [0.0001, 2.5, 2.5, 2.5, 2.5, 0.0001]
+    Echelon_holding_cost_list = [0.0001, 2.5, 2.5, 2.5, 2.5, 0.0001]
     penalty_cost = 99
-    lbs, ubs = Bounds(lead_time_list, echelon_holding_cost_list, penalty_cost, 1, "Simulation",True)
+
+    lbs, ubs = Bounds(Lead_time_list, Echelon_holding_cost_list, penalty_cost, 1, "Simulation", True)
     print("Rounding lbs: {}".format(lbs))
     print("Rounding ubs: {}".format(ubs))
 

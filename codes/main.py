@@ -48,7 +48,7 @@ if __name__ == "__main__":
     number: original sequences
     label: sequences after labeling procedure.
     """
-    root = {"lead_time": 0, "holding_cost": 0.7, "penalty_cost": 9, "successor": None, "predecessors": [1, 2],
+    root = {"lead_time": 3, "holding_cost": 0.7, "penalty_cost": 9, "successor": None, "predecessors": [1, 2],
             "number": 0}
     node1 = {"lead_time": 1, "holding_cost": 0.2, "successor": 0, "predecessors": [3, 4], "number": 1}
     node2 = {"lead_time": 4, "holding_cost": 0.4, "successor": 0, "predecessors": [5, 6], "number": 2}
@@ -64,7 +64,11 @@ if __name__ == "__main__":
     # print("serial nodes: {}".format(serial.nodes))
     # print("serial successor: {}".format(serial.leaves[0].successor.number))
 
-    conf = ConfigX(lam=16, distribution='normal',parameters=(1, 0), samples=20000, decimal=4)
-    dict_bounds = calc_bounds(serial=serial, method="Simulation", gene_table=True, conf=conf)
+    sampling_data = np.random.randn(1000) * 10
+
+    # conf = ConfigX(lam=16, distribution='normal', parameters=(1, 0), samples=20000, decimal=4)
+    # dict_bounds = calc_bounds(serial=serial, method="Simulation", gene_table=True, conf=conf)
+
+    dict_bounds = calc_bounds(serial=serial, data=sampling_data, method="nonparametric")
     print("Rounding bound dictionary: {}".format(dict_bounds))
     print("Total run time: {:.8f} seconds".format(time.time()-start))
